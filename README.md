@@ -6,6 +6,22 @@ Dependency injection library for Lua that supports constructor based injection.
 - Support for configuring types to be kept in singleton scope
 - Zero configuration/customisation of application required, exept for main module configuration itself
 
+## On this branch (Wrapping creator)
+
+Added ability to wrap creation of new singleton with
+wrapping function that receive its name and originally constructed value
+(which can be changed via return value)
+
+### Use case:
+
+Mainly for manipulating injection during tests.
+For example when using Lua Busted test framework
+you can use following code to mock all dependencies:
+
+```lua
+cfg.setWrappingFunction(function(name, obj) return mock(obj) end)
+```
+
 ----
 
 ## Install

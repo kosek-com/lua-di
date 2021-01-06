@@ -5,6 +5,7 @@ local DependencyInjectionModule = function(configure)
 
     local initalised = false
     local autoInjectEnabled = false
+    local autoFunc = function(name, val) return val end
     local providers = {}
     local singletons = {}
     local bindings = 
@@ -49,7 +50,7 @@ local DependencyInjectionModule = function(configure)
         local bindingValue = bindings.values[argumentName]
 
         if type(bindingType) == "string" then
-            return self.getInstance(bindingType)
+            return autoFunc(bindingType, self.getInstance(bindingType))
         elseif bindingValue ~= nil then
             return bindingValue
         end
@@ -57,7 +58,7 @@ local DependencyInjectionModule = function(configure)
         if autoInjectEnabled then
             local moduleName = argumentName:gsub("__", ".")
 
-            return self.getInstance(moduleName)
+            return autoFunc(argumentName, self.getInstance(moduleName))
         end
 
         return nil
@@ -132,6 +133,9 @@ local DependencyInjectionModule = function(configure)
                     singletons = singletons,
                     enableAutoConfiguration = function()
                         autoInjectEnabled = true
+                    end,
+                    setWrappingFunction = function(func)
+                        autoFunc = func
                     end
                 }
             )
@@ -160,21 +164,18 @@ local DependencyInjectionModule = function(configure)
         elseif type(providers[moduleName]) ~= "nil" then
             -- provider instance
             instance = providers[moduleName] 
-        end
+        else
+			local moduleHandle = dynamicRequire(moduleName)
+			local moduleConstructor = getConstructor(moduleName, moduleHandle)
 
-        if singletons[moduleName] then
-            -- initialise singleton instance if needed
-            singletons[moduleName].instance = instance
-
-            -- singleton instance
-            return singletons[moduleName].instance
-        end
-
-        local moduleHandle = dynamicRequire(moduleName)
-        local moduleConstructor = getConstructor(moduleName, moduleHandle)
-
-        -- new instance
-        return buildInstance(moduleConstructor)
+			-- new instance
+			instance = buildInstance(moduleConstructor)
+		end
+		
+		if singletons[moduleName] == nil then singletons[moduleName] = {} end
+		
+		singletons[moduleName].instance = instance
+		return singletons[moduleName].instance
     end
 
     return self
